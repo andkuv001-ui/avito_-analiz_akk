@@ -1,0 +1,6 @@
+{
+  "name": "АвитоПульс — Анализатор эффективности объявлений",
+  "description": "Профессиональный аналитический дашборд для оценки эффективности, аудита SEO, воронки просмотров и оптимизации объявлений на Авито.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
