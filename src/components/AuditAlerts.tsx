@@ -16,7 +16,10 @@ export const AuditAlerts: React.FC<AuditAlertsProps> = ({
   onSelectListing,
   onFilterByTier,
 }) => {
-  const wrongCategoryListing = listings.find(l => l.categoryFull.toLowerCase().includes('одежда'));
+  const categoryMismatchListing = listings.find(l =>
+    l.auditIssues.some(i => i.category === 'category' && (i.severity === 'critical' || i.severity === 'warning'))
+  );
+  const categoryIssue = categoryMismatchListing?.auditIssues.find(i => i.category === 'category');
   const organicGemListing = listings.find(l => !l.isPromoted && l.viewsTotal > 1000);
   const topTodayListing = [...listings].sort((a, b) => b.viewsToday - a.viewsToday)[0];
 
@@ -32,51 +35,55 @@ export const AuditAlerts: React.FC<AuditAlertsProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Alert 1: Critical Category Mismatch */}
-        {wrongCategoryListing && (
-          <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl flex flex-col justify-between">
+        {/* Alert 1: Dynamic Category Placement Strategy */}
+        {categoryMismatchListing && categoryIssue && (
+          <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-rose-800 font-semibold text-xs mb-1">
-                <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>Критическая ошибка категории</span>
+              <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs mb-1">
+                <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Стратегия категории размещения</span>
               </div>
-              <p className="text-xs text-rose-900/80 leading-relaxed">
-                Объявление «{wrongCategoryListing.title.slice(0, 32)}...» попало в <span className="font-semibold underline">Личные вещи / Одежда</span> вместо «Для бизнеса».
+              <p className="text-xs text-blue-950/80 leading-relaxed">
+                «{categoryMismatchListing.title.slice(0, 32)}...»: размещено в товарной категории. В товарах размещение бывает в разы дешевле и действует оплата за клики (CPC), что выгодно на заказ. Сравните CPL с разделом «Услуги».
               </p>
             </div>
             <button
               type="button"
-              onClick={() => onSelectListing(wrongCategoryListing)}
-              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-rose-700 hover:text-rose-900 transition-colors pt-2 border-t border-rose-200/60"
+              onClick={() => onSelectListing(categoryMismatchListing)}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 transition-colors pt-2 border-t border-blue-200/60"
             >
-              <span>Исправить объявление</span>
+              <span>Оценить карточку и тариф</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Alert 2: Courier Bags Size-Matrix Optimization */}
-        {summary.cannibalizationClusters.length > 0 && (
-          <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs mb-1">
-                <Layers className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Размерная сетка пакетов</span>
+        {/* Alert 2: Dynamic Multi-Listing / Size / Model Matrix Optimization */}
+        {summary.cannibalizationClusters.length > 0 && (() => {
+          const primaryCluster = summary.cannibalizationClusters[0];
+          const clusterName = primaryCluster.titlePattern.replace(/\s*\(\d+\s*позиций\)/, '');
+          return (
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs mb-1">
+                  <Layers className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="truncate">Линейка: {clusterName}</span>
+                </div>
+                <p className="text-xs text-amber-900/80 leading-relaxed">
+                  {primaryCluster.count} объявл. под конкретные модели/размеры собирают целевой НЧ-трафик. Чтобы повысить CTR, протестируйте чистое живое фото (оно часто конвертирует лучше инфографики) и проверьте мастер-объявление.
+                </p>
               </div>
-              <p className="text-xs text-amber-900/80 leading-relaxed">
-                {summary.cannibalizationClusters[0].count} объявлений под конкретные размеры собирают точный НЧ-трафик. Чтобы повысить CTR, нанесите размер на фото и сфокусируйте бюджет.
-              </p>
+              <button
+                type="button"
+                onClick={() => onFilterByTier('cannibalization')}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 hover:text-amber-950 transition-colors pt-2 border-t border-amber-200/60"
+              >
+                <span>Открыть линейку ({primaryCluster.count} шт.)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => onFilterByTier('cannibalization')}
-              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 hover:text-amber-950 transition-colors pt-2 border-t border-amber-200/60"
-            >
-              <span>Открыть сетку размеров ({summary.cannibalizationClusters[0].count} шт.)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Alert 3: Promo Leaks */}
         {summary.promotedZeroViewsCount > 0 && (

@@ -203,16 +203,16 @@ function capitalize(s: string): string {
 export function generateActionTasks(listings: AvitoListing[], summary: ProfileSummary): ActionTask[] {
   const tasks: ActionTask[] = [];
 
-  // Task 1: Category fix
-  const wrongCategoryAds = listings.filter(l => l.auditIssues.some(i => i.category === 'category' && i.severity === 'critical'));
-  if (wrongCategoryAds.length > 0) {
+  // Task 1: Category strategy evaluation (non-categorical, respectful of CPC/tariff economics)
+  const categoryAds = listings.filter(l => l.auditIssues.some(i => i.category === 'category'));
+  if (categoryAds.length > 0) {
     tasks.push({
       id: 'task-category-fix',
-      priority: 'high',
-      category: 'Категории',
-      title: 'Устранить критические ошибки категорий размещения',
-      description: `Найдено ${wrongCategoryAds.length} объявл. (например, ID: ${wrongCategoryAds[0].id}), размещенных в нерелевантных разделах каталога Авито. Это срезает органические показы.`,
-      targetListingIds: wrongCategoryAds.map(l => l.id),
+      priority: 'medium',
+      category: 'Категории & Тарифы',
+      title: `Оценить стратегию категорий: товары vs «Услуги» (${categoryAds.length} объявл.)`,
+      description: `Часть объявлений (например, ID: ${categoryAds[0].id}) размещена в товарном разделе каталога. Это распространенная и часто выгодная практика: размещение в товарных разделах бывает в разы дешевле раздела «Услуги», и действует оплата за просмотры/клики (CPC), что снижает цену лида. Рекомендуется замерить реальный CPL в текущей категории перед переводом.`,
+      targetListingIds: categoryAds.map(l => l.id),
       completed: false,
     });
   }
@@ -225,7 +225,7 @@ export function generateActionTasks(listings: AvitoListing[], summary: ProfileSu
       priority: 'high',
       category: 'Продвижение',
       title: `Остановить или перенастроить ${promoLeakAds.length} объявлений со сливом продвижения`,
-      description: 'Объявления имеют активные платные услуги («Продвинуто»), но сегодня получили 0 просмотров. Смените главное фото на контрастное или сфокусируйте платный бюджет на топ-локомотивах.',
+      description: 'Объявления имеют активные платные услуги («Продвинуто»), но сегодня получили 0 просмотров. Протестируйте контрастное естественное живое фото (чистые живые кадры без навязчивой инфографики часто дают более высокую кликабельность) либо перенаправьте бюджет на топ-локомотивы.',
       targetListingIds: promoLeakAds.map(l => l.id),
       completed: false,
     });
@@ -237,9 +237,9 @@ export function generateActionTasks(listings: AvitoListing[], summary: ProfileSu
     tasks.push({
       id: 'task-matrix-optimization',
       priority: 'high',
-      category: 'Ассортимент & SEO',
+      category: 'Ассортимент & Визуал',
       title: `Оптимизировать размерную / модельную сетку (${cluster.titlePattern})`,
-      description: `Отдельные карточки дают максимальный охват точных поисковых запросов. Чтобы повысить их отдачу: 1) нанесите ключевую характеристику крупно на первое фото; 2) продвигайте платно 2–3 ходовых позиции; 3) добавьте перелинковку в описании; 4) протестируйте гипотезу создания одного общего мастер-объявления со сводным прайсом.`,
+      description: `Отдельные карточки дают максимальный охват точных поисковых запросов. Чтобы повысить их отдачу: 1) протестируйте чистое живое фото высокого качества (естественные живые кадры процесса и результата без тяжелой инфографики вызывают максимальное доверие) в A/B тесте против карточек с плашкой параметров; 2) продвигайте платно 2–3 ходовые позиции; 3) протестируйте гипотезу параллельного запуска одного общего мастер-объявления со сводным прайсом.`,
       targetListingIds: cluster.listingIds,
       completed: false,
     });
@@ -268,8 +268,8 @@ export function generateActionTasks(listings: AvitoListing[], summary: ProfileSu
       category: 'Контент',
       title: `Догрузить фото в карточки с малым количеством кадров (${lowPhotoAds.length} шт.)`,
       description: summary.businessType === 'services'
-        ? 'Для услуг фото выполненных работ и лица мастера поднимают доверие в 2 раза. Добавьте кадры процесса и портфолио.'
-        : 'Карточки с 2–3 фото теряют до 30% конверсии в контакты. Добавьте инфографику параметров и живые фото.',
+        ? 'Для услуг живые фото процесса работы, оборудования, мастеров и выполненных объектов повышают доверие в 2 раза. Добавьте естественные кадры без визуального шума.'
+        : 'Карточки с 2–3 фото теряют до 30% конверсии в контакты. Добавьте качественные живые фото: детализация, товар в реальных условиях использования, процесс работы. Чистые естественные кадры вызывают наибольшее доверие клиентов.',
       targetListingIds: lowPhotoAds.map(l => l.id),
       completed: false,
     });

@@ -69,7 +69,8 @@ export const ListingsTable: React.FC<ListingsTableProps> = ({
         if (tierFilter === 'promo_leak') {
           if (!(item.isPromoted && item.viewsToday === 0 && item.viewsTotal > 20)) return false;
         } else if (tierFilter === 'cannibalization') {
-          if (!item.title.toLowerCase().includes('курьерский пакет')) return false;
+          const inCluster = item.auditIssues.some(i => i.category === 'cannibalization');
+          if (!inCluster) return false;
         } else if (tierFilter === 'locomotive') {
           if (item.viewsTotal < 2000) return false;
         } else if (tierFilter === 'organic_gem') {
@@ -242,17 +243,19 @@ export const ListingsTable: React.FC<ListingsTableProps> = ({
             >
               ⚠️ Слив продвижения
             </button>
-            <button
-              type="button"
-              onClick={() => setTierFilter(tierFilter === 'cannibalization' ? null : 'cannibalization')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
-                tierFilter === 'cannibalization'
-                  ? 'bg-neutral-900 text-white border-neutral-900'
-                  : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-              }`}
-            >
-              Сетка курьерских пакетов
-            </button>
+            {listings.some(l => l.auditIssues.some(i => i.category === 'cannibalization')) && (
+              <button
+                type="button"
+                onClick={() => setTierFilter(tierFilter === 'cannibalization' ? null : 'cannibalization')}
+                className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                  tierFilter === 'cannibalization'
+                    ? 'bg-neutral-900 text-white border-neutral-900'
+                    : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                }`}
+              >
+                Модельный ряд / сетка
+              </button>
+            )}
           </div>
 
           {/* Issue Only Toggle */}

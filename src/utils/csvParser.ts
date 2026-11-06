@@ -255,9 +255,17 @@ function detectIsService(categoryFull: string, title: string, desc: string): boo
 }
 
 function detectUniversalGroup(categoryFull: string, title: string, fallbackCat: string): string {
+  const ignored = ['другое', 'главная', 'россия', 'москва', 'санкт-петербург', 'в наличии', 'новое', 'б/у', ''];
+  const cleanFallback = (fallbackCat || '').trim();
+
+  // If Avito category provides meaningful group, prioritize it!
+  if (cleanFallback && !ignored.includes(cleanFallback.toLowerCase())) {
+    return cleanFallback;
+  }
+
   const t = title.toLowerCase();
 
-  // Common specific keywords if found
+  // Specific keywords if catalog is generic
   if (t.includes('коробк') || t.includes('гофрокор')) return 'Коробки картонные';
   if (t.includes('зип') || t.includes('zip') || t.includes('бегунком')) return 'Пакеты Zip-Lock';
   if (t.includes('бопп') || t.includes('bopp')) return 'Пакеты БОПП';
@@ -267,6 +275,9 @@ function detectUniversalGroup(categoryFull: string, title: string, fallbackCat: 
   if (t.includes('пузырьков') || t.includes('пузырчат') || t.includes('впп')) return 'Пузырьковая пленка';
   if (t.includes('термоэтикетк') || t.includes('этикетк')) return 'Термоэтикетки';
   if (t.includes('рохл') || t.includes('штабелер') || t.includes('тележка')) return 'Складская техника';
+
+  // Furniture / Woodcraft
+  if (t.includes('стол') || t.includes('стул') || t.includes('массив') || t.includes('мебель') || t.includes('шкаф') || t.includes('кроват') || t.includes('тумб') || t.includes('стеллаж')) return 'Мебель из массива';
 
   // Services
   if (t.includes('ремонт квартир') || t.includes('отделка квартир')) return 'Ремонт квартир & Отделка';
@@ -278,11 +289,6 @@ function detectUniversalGroup(categoryFull: string, title: string, fallbackCat: 
   if (t.includes('автовышк') || t.includes('спецтехник') || t.includes('экскаватор')) return 'Аренда спецтехники';
   if (t.includes('iphone') || t.includes('смартфон') || t.includes('телефон')) return 'Смартфоны & Гаджеты';
   if (t.includes('запчаст') || t.includes('бампер') || t.includes('фара') || t.includes('двигатель')) return 'Автозапчасти';
-
-  // Fallback to Category 4 or Category 3 from Avito
-  if (fallbackCat && fallbackCat !== 'Другое' && fallbackCat !== 'Главная') {
-    return fallbackCat;
-  }
 
   // Derive from first 2 meaningful words of title
   const words = title.split(/\s+/).slice(0, 2).join(' ');
@@ -307,29 +313,28 @@ function runUniversalAudit(params: {
   const catLower = params.categoryFull.toLowerCase();
   const descLower = params.descriptionText.toLowerCase();
 
-  // 1. Wrong Category Check
+  // 1. Category Strategy Analysis (Non-categorical & respectful of CPC/tariff economics)
   if (params.itemType === 'product') {
-    if ((catLower.includes('одежда') || catLower.includes('личные вещи')) &&
-        (params.title.toLowerCase().includes('пакет') || params.title.toLowerCase().includes('коробк') || params.title.toLowerCase().includes('пленк'))) {
+    if (catLower.includes('услуг') || catLower.includes('предложение услуг')) {
       issues.push({
-        id: `${params.id}-cat-wrong`,
-        severity: 'critical',
+        id: `${params.id}-cat-services-branch`,
+        severity: 'info',
         category: 'category',
-        title: 'Грубая ошибка категории размещения',
-        description: `Товар «${params.title}» размещен в ветке "${params.categoryFull}". B2B-клиенты ищут расходники в разделе «Для бизнеса» или «Оргтехника». В одежде объявление пессимизируется поисковыми фильтрами.`,
-        recommendation: 'Перенесите карточку в релевантную категорию для бизнеса или расходных материалов.',
+        title: 'Размещение товара в разделе «Услуги»',
+        description: `Позиция «${params.title}» размещена в категории «${params.categoryFull}». В услугах недоступна покупка через Авито Доставку, однако карточка привлекает клиентов на индивидуальные заказы.`,
+        recommendation: 'Оцените экономику: если товар штучный или серийный, протестируйте параллельное размещение в товарном каталоге для подключения Авито Доставки.',
       });
     }
   } else {
-    // Services category check
+    // Services or custom craft published in goods catalog
     if (!catLower.includes('услуг') && !catLower.includes('предложение услуг')) {
       issues.push({
-        id: `${params.id}-cat-service-wrong`,
-        severity: 'warning',
+        id: `${params.id}-cat-goods-branch`,
+        severity: 'info',
         category: 'category',
-        title: 'Услуга размещена вне раздела «Услуги»',
-        description: `Объявление на услугу («${params.title}») размещено в товарной ветке «${params.categoryFull}». Клиенты ищут мастеров во вкладке «Услуги».`,
-        recommendation: 'Перенесите объявление в раздел «Услуги» для активации отзывов мастеров и рейтинга исполнителя.',
+        title: 'Стратегия: размещение в товарной ветке (вместо раздела услуг)',
+        description: `Позиция «${params.title}» опубликована в товарном каталоге («${params.categoryFull}»). Это распространенная и зачастую очень выгодная практика: в товарных разделах стоимость размещения в разы ниже, и доступна оплата за просмотры/клики (CPC), что при изготовлении на заказ может снижать CPL (стоимость заявки).`,
+        recommendation: 'Не спешите переносить карточку: если товарная ветка стабильно дает недорогие заявки по CPC, сохраняйте стратегию. Для теста можно запустить 1 параллельное объявление в раздел «Услуги» и сравнить конверсию в заказы.',
       });
     }
   }
@@ -341,8 +346,8 @@ function runUniversalAudit(params: {
       severity: 'warning',
       category: 'promo',
       title: 'Слив бюджета: продвижение активно, но 0 просмотров сегодня',
-      description: 'Платная услуга продвижения расходует баланс, но сегодня карточка не получила просмотров. Это признак слабого главного фото или неконкурентного заголовка в ленте.',
-      recommendation: 'Замените главное фото на контрастное (с инфографикой ключевого УТП / цены / результата) или перенастройте время применения платных услуг на пиковые рабочие часы.',
+      description: 'Платная услуга продвижения расходует баланс, но сегодня карточка не получила просмотров. Это признак слабого кликабельности (CTR) главного фото или неконкурентного заголовка в ленте.',
+      recommendation: 'Протестируйте контрастное естественное живое фото высокого качества (чистые живые кадры без визуального шума часто конвертируют лучше перегруженной инфографики). Либо проверьте время применения продвижения.',
     });
   }
 
@@ -352,22 +357,22 @@ function runUniversalAudit(params: {
       id: `${params.id}-photo-low`,
       severity: 'warning',
       category: 'photos',
-      title: `Критически мало фото (${params.photoCount} шт.)`,
+      title: `Мало фотографий (${params.photoCount} шт.)`,
       description: params.itemType === 'service'
-        ? 'Для услуг фото — это главное доказательство квалификации (портфолио, примеры работ до/после, лицо мастера).'
+        ? 'Для услуг фото — это главное доказательство квалификации (портфолио, примеры работ, процесс, лицо мастера).'
         : 'Алгоритмы Авито отдают приоритет объявлениям с 5–10 фото. Карточки с 1–2 фото получают меньше доверия.',
       recommendation: params.itemType === 'service'
-        ? 'Добавьте реальные фото выполненных объектов, инструментов, процесса работы и свое фото.'
-        : 'Добавьте фото товара с разных сторон, макросъемку качества/швов, упаковку и инфографику параметров.',
+        ? 'Добавьте реальные фото выполненных объектов, деталей, процесса работы и мастера. Живые естественные кадры вызывают максимальное доверие.'
+        : 'Добавьте качественные живые фото: объект в реальных условиях, ключевые узлы крупным планом, детали (чистые живые фото без визуального шума работают лучше всего).',
     });
   } else if (params.photoCount < 6) {
     issues.push({
       id: `${params.id}-photo-mid`,
       severity: 'info',
       category: 'photos',
-      title: `Рекомендуется дополнить фото (${params.photoCount} шт.)`,
+      title: `Рекомендуется дополнить фоторяд (${params.photoCount} шт.)`,
       description: 'Карточки с 7–10 фотографиями удерживают внимание в 1.8 раза дольше, повышая конверсию в звонок.',
-      recommendation: 'Загрузите инфографику с прайс-листом, схемой работы или гарантией.',
+      recommendation: 'Добавьте живые детальные кадры: ключевые узлы, процесс работы или производства, варианты исполнения (без навязчивой инфографики).',
     });
   }
 
@@ -424,7 +429,7 @@ function runUniversalAudit(params: {
         category: 'seo',
         title: 'Не указаны условия доставки и самовывоза',
         description: 'Покупатели сразу ищут, где забрать товар или как быстро его привезут.',
-        recommendation: 'Четко пропишите варианты: курьерская доставка, самовывоз со склада и отправка по РФ.',
+        recommendation: 'Четко укажите доступные варианты: доставка до адреса/объекта, самовывоз и отправка по РФ.',
       });
     }
   }
@@ -493,8 +498,47 @@ function determinePerformanceTier(params: {
 }
 
 function enrichCrossListingAudits(listings: AvitoListing[]) {
-  // Universal multi-listing / size / model clustering
-  // Group by first 2-3 words of title (e.g. "Курьерский пакет", "Ремонт стиральных", "Чехол для")
+  // 1. Dynamic category anomaly detection across entire catalog
+  if (listings.length >= 5) {
+    const rootCatCounts = new Map<string, number>();
+    for (const l of listings) {
+      const parts = l.categoryFull.split(';').map(s => s.trim()).filter(Boolean);
+      // First high-level catalog branch after "Главная"
+      const rootCat = parts[1] || parts[0] || 'Основное';
+      rootCatCounts.set(rootCat, (rootCatCounts.get(rootCat) || 0) + 1);
+    }
+
+    let dominantCat = '';
+    let maxCount = 0;
+    for (const [cat, cnt] of rootCatCounts.entries()) {
+      if (cnt > maxCount) {
+        maxCount = cnt;
+        dominantCat = cat;
+      }
+    }
+
+    const dominantShare = maxCount / listings.length;
+    if (dominantShare >= 0.7 && dominantCat) {
+      for (const l of listings) {
+        const parts = l.categoryFull.split(';').map(s => s.trim()).filter(Boolean);
+        const rootCat = parts[1] || parts[0] || '';
+        if (rootCat && rootCat !== dominantCat && (rootCatCounts.get(rootCat) || 0) <= 2) {
+          if (!l.auditIssues.some(i => i.category === 'category')) {
+            l.auditIssues.unshift({
+              id: `${l.id}-cat-anomaly`,
+              severity: 'info',
+              category: 'category',
+              title: `Особенность категории: ветка «${rootCat}»`,
+              description: `Позиция «${l.title}» размещена в разделе «${l.categoryFull}» (основная часть ассортимента — в «${dominantCat}»). Размещение в товарных разделах часто обусловлено более дешевым тарифом и CPC-моделью (оплата за клики/просмотры), что при работе на заказ бывает намного выгоднее.`,
+              recommendation: `Оцените стоимость лида (CPL): если товарный раздел дает стабильные заявки по CPC, сохраняйте стратегию. При необходимости можно протестировать 1 объявление в «${dominantCat}» или разделе услуг.`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Universal multi-listing / size / model clustering
   const prefixMap = new Map<string, AvitoListing[]>();
 
   for (const l of listings) {
@@ -525,7 +569,7 @@ function enrichCrossListingAudits(listings: AvitoListing[]) {
             category: 'cannibalization',
             title: `Размерная / модельная сетка («${prefix}», ${groupListings.length} карточек)`,
             description: `В профиле создана линейка отдельных объявлений под конкретные модификации/размеры (${groupListings.length} шт., суммарно ${viewsToday} просм./день). Отдельные карточки дают суммарно больше низкочастотного трафика, если их обложки контрастно дифференцированы.`,
-            recommendation: '1) Убедитесь, что на 1-м фото каждой карточки крупно нанесено отличие (размер, модель, мощность). 2) Продвигайте платно только 2-3 флагманских размера/модели, остальные держите на бесплатной органике. 3) Проверьте гипотезу о параллельном запуске одного общего мастер-объявления для сравнения конверсии.',
+            recommendation: '1) Протестируйте чистые естественные живые фото каждой позиции (естественные кадры без тяжелой графики часто дают наибольшую конверсию). 2) Сравните в A/B тесте чистое фото против карточки с аккуратной минималистичной плашкой параметров. 3) Продвигайте платно 2–3 ходовые позиции, остальные держите на органике. 4) Проверьте параллельный запуск мастер-объявления.',
           });
         }
       }
